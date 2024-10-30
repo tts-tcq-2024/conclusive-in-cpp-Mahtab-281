@@ -15,6 +15,7 @@ TEST(TypeWiseAlertTestSuite, ClassifiesTemperatureBreach) {
  
 TEST(TypeWiseAlertTestSuite, AlertsControllerWhenBreachDetected) {
     BatteryCharacter batteryChar = {PASSIVE_COOLING, "BrandX"};
+ 
     // Test TOO_HIGH breach alert to controller
     messageStore.clearMessages();
     checkAndAlert(TO_CONTROLLER, batteryChar, 40.0);
