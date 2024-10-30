@@ -7,9 +7,9 @@
 MessageStore messageStore;
 
 BreachType inferBreach(double value, double lowerLimit, double upperLimit) {
-  return (value < lowerLimit) ? TOO_LOW :
-         (value > upperLimit) ? TOO_HIGH :
-         NORMAL;
+    return (value < lowerLimit) ? TOO_LOW :
+           (value > upperLimit) ? TOO_HIGH :
+           NORMAL;
 }
 
 BreachType classifyTemperatureBreach(CoolingType coolingType, double temperatureInC) {
@@ -20,30 +20,30 @@ BreachType classifyTemperatureBreach(CoolingType coolingType, double temperature
 }
 
 void checkAndAlert(AlertTarget alertTarget, BatteryCharacter batteryChar, double temperatureInC) {
-  BreachType breachType = classifyTemperatureBreach(batteryChar.coolingType, temperatureInC);
+    BreachType breachType = classifyTemperatureBreach(batteryChar.coolingType, temperatureInC);
 
-  if(alertTarget == TO_CONTROLLER) {
-    sendToController(breachType);
-  } else {
-    sendToEmail(breachType);
-  }
+    if (alertTarget == TO_CONTROLLER) {
+        sendToController(breachType);
+    } else {
+        sendToEmail(breachType);
+    }
 }
 
 void sendToController(BreachType breachType) {
-  const unsigned short header = 0xfeed;
-  std::ostringstream message;
-  message << std::hex << header << " : " << breachType;
-  messageStore.addMessage(message.str());
+    const unsigned short header = 0xfeed;
+    std::ostringstream message;
+    message << std::hex << header << " : " << breachType;
+    messageStore.addMessage(message.str());
 }
 
 void sendToEmail(BreachType breachType) {
-  if (breachType == NORMAL) return;
+    if (breachType == NORMAL) return;
 
-  const char* recipient = "a.b@c.com";
-  std::string message = (breachType == TOO_LOW) 
-                        ? "Hi, the temperature is too low" 
-                        : "Hi, the temperature is too high";
+    const char* recipient = "a.b@c.com";
+    std::string message = (breachType == TOO_LOW) 
+                          ? "Hi, the temperature is too low" 
+                          : "Hi, the temperature is too high";
 
-  messageStore.addMessage("To: " + std::string(recipient));
-  messageStore.addMessage(message);
+    messageStore.addMessage("To: " + std::string(recipient));
+    messageStore.addMessage(message);
 }
