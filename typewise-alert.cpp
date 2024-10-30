@@ -47,3 +47,4 @@ void sendToEmail(BreachType breachType) {
     messageStore.addMessage("To: " + std::string(recipient));
     messageStore.addMessage(message);
 }
+
