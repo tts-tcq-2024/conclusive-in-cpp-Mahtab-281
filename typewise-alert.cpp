@@ -1,65 +1,49 @@
-#include <gtest/gtest.h>
 #include "typewise-alert.h"
+#include <sstream>
+#include <vector>
+#include <string>
 
-TEST(TypeWiseAlertTestSuite, InfersBreachAccordingToLimits) {
-    EXPECT_EQ(inferBreach(20.0, 0.0, 35.0), NORMAL);
-    EXPECT_EQ(inferBreach(-5.0, 0.0, 35.0), TOO_LOW);
-    EXPECT_EQ(inferBreach(40.0, 0.0, 35.0), TOO_HIGH);
+// Global instance of MessageStore
+MessageStore messageStore;
+
+BreachType inferBreach(double value, double lowerLimit, double upperLimit) {
+    return (value < lowerLimit) ? TOO_LOW :
+           (value > upperLimit) ? TOO_HIGH :
+           NORMAL;
 }
 
-TEST(TypeWiseAlertTestSuite, ClassifiesTemperatureBreach) {
-    EXPECT_EQ(classifyTemperatureBreach(PASSIVE_COOLING, 20.0), NORMAL);
-    EXPECT_EQ(classifyTemperatureBreach(PASSIVE_COOLING, -5.0), TOO_LOW);
-    EXPECT_EQ(classifyTemperatureBreach(PASSIVE_COOLING, 40.0), TOO_HIGH);
+BreachType classifyTemperatureBreach(CoolingType coolingType, double temperatureInC) {
+    int lowerLimit = coolingLimits[coolingType].lowerLimit;
+    int upperLimit = coolingLimits[coolingType].upperLimit;
+
+    return inferBreach(temperatureInC, lowerLimit, upperLimit);
 }
 
-TEST(TypeWiseAlertTestSuite, AlertsControllerWhenBreachDetected) {
-    BatteryCharacter batteryChar = {PASSIVE_COOLING, "BrandX"};
-    
-    // Test TOO_HIGH breach alert to controller
-    messageStore.clearMessages();
-    checkAndAlert(TO_CONTROLLER, batteryChar, 40.0);
-    auto log = messageStore.getMessages();
-    EXPECT_EQ(log.size(), 1);
-    EXPECT_EQ(log[0], "feed : 2");
+void checkAndAlert(AlertTarget alertTarget, BatteryCharacter batteryChar, double temperatureInC) {
+    BreachType breachType = classifyTemperatureBreach(batteryChar.coolingType, temperatureInC);
 
-    // Test TOO_LOW breach alert to controller
-    messageStore.clearMessages();
-    checkAndAlert(TO_CONTROLLER, batteryChar, -10.0);
-    log = messageStore.getMessages();
-    EXPECT_EQ(log.size(), 1);
-    EXPECT_EQ(log[0], "feed : 1");
-
-    // Test NORMAL condition alert to controller (expect NORMAL message)
-    messageStore.clearMessages();
-    checkAndAlert(TO_CONTROLLER, batteryChar, 20.0);
-    log = messageStore.getMessages();
-    EXPECT_EQ(log.size(), 1);
-    EXPECT_EQ(log[0], "feed : 0");
+    if (alertTarget == TO_CONTROLLER) {
+        sendToController(breachType);
+    } else {
+        sendToEmail(breachType);
+    }
 }
 
-TEST(TypeWiseAlertTestSuite, SendsEmailWhenBreachDetected) {
-    BatteryCharacter batteryChar = {PASSIVE_COOLING, "BrandY"};
+void sendToController(BreachType breachType) {
+    const unsigned short header = 0xfeed;
+    std::ostringstream message;
+    message << std::hex << header << " : " << breachType;
+    messageStore.addMessage(message.str());
+}
 
-    // Test TOO_HIGH breach alert to email
-    messageStore.clearMessages();
-    checkAndAlert(TO_EMAIL, batteryChar, 40.0);
-    auto log = messageStore.getMessages();
-    EXPECT_EQ(log.size(), 2);
-    EXPECT_EQ(log[0], "To: a.b@c.com");
-    EXPECT_EQ(log[1], "Hi, the temperature is too high");
+void sendToEmail(BreachType breachType) {
+    if (breachType == NORMAL) return;
 
-    // Test TOO_LOW breach alert to email
-    messageStore.clearMessages();
-    checkAndAlert(TO_EMAIL, batteryChar, -10.0);
-    log = messageStore.getMessages();
-    EXPECT_EQ(log.size(), 2);
-    EXPECT_EQ(log[0], "To: a.b@c.com");
-    EXPECT_EQ(log[1], "Hi, the temperature is too low");
+    const char* recipient = "a.b@c.com";
+    std::string message = (breachType == TOO_LOW) 
+                          ? "Hi, the temperature is too low" 
+                          : "Hi, the temperature is too high";
 
-    // Test NORMAL condition alert to email (no output expected)
-    messageStore.clearMessages();
-    checkAndAlert(TO_EMAIL, batteryChar, 20.0);
-    log = messageStore.getMessages();
-    EXPECT_EQ(log.size(), 0);
+    messageStore.addMessage("To: " + std::string(recipient));
+    messageStore.addMessage(message);
 }
