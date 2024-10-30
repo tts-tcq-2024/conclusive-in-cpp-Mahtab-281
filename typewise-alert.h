@@ -1,40 +1,72 @@
-#include <stdio.h>
+#pragma once
+
+#include <vector>
 #include <string>
-#include <sstream>
-#include <iostream>
-#include <cstring>
 
-typedef enum {
-  PASSIVE_COOLING,
-  HI_ACTIVE_COOLING,
-  MED_ACTIVE_COOLING,
-  noOfCoolingTypes
-} CoolingType;
+// Enum for cooling types
+enum CoolingType {
+    PASSIVE_COOLING,
+    HI_ACTIVE_COOLING,
+    MED_ACTIVE_COOLING
+};
 
-typedef enum {
-  NORMAL,
-  TOO_LOW,
-  TOO_HIGH,
-  noOfBreachTypes
-} BreachType;
+// Enum for breach types
+enum BreachType {
+    NORMAL,
+    TOO_LOW,
+    TOO_HIGH
+};
 
+// Structure to hold cooling limits
+struct CoolingLimits {
+    int lowerLimit;
+    int upperLimit;
+};
+
+// Cooling limits for different cooling types
+const CoolingLimits coolingLimits[] = {
+    {0, 35},  // PASSIVE_COOLING
+    {0, 45},  // HI_ACTIVE_COOLING
+    {0, 40}   // MED_ACTIVE_COOLING
+};
+
+// Function prototypes
 BreachType inferBreach(double value, double lowerLimit, double upperLimit);
 BreachType classifyTemperatureBreach(CoolingType coolingType, double temperatureInC);
 
-typedef enum {
-  TO_CONTROLLER,
-  TO_EMAIL,
-  noOfAlertTargets
-} AlertTarget;
+// Enum for alert targets
+enum AlertTarget {
+    TO_CONTROLLER,
+    TO_EMAIL
+};
 
-typedef struct {
-  CoolingType coolingType;
-  std::string brand;
-} BatteryCharacter;
+// Structure for battery character
+struct BatteryCharacter {
+    CoolingType coolingType;
+    char brand[48];
+};
 
-std::string checkAndAlert(AlertTarget alertTarget, BatteryCharacter batteryChar, double temperatureInC);
+// Message store structure
+struct MessageStore {
+    std::vector<std::string> messages;
 
-std::string sendToController(BreachType breachType);
-std::string sendToEmail(BreachType breachType);
+    void addMessage(const std::string& message) {
+        messages.push_back(message);
+    }
 
-void setLowerAndUpperLimits(int lowerLimitList[] ,int upperLimitList[]);
+    void clearMessages() {
+        messages.clear();
+    }
+
+    std::vector<std::string> getMessages() const {
+        return messages;
+    }
+};
+
+// Global instance of MessageStore
+extern MessageStore messageStore;
+
+// Alert checking function
+void checkAndAlert(AlertTarget alertTarget, BatteryCharacter batteryChar, double temperatureInC);
+void sendToController(BreachType breachType);
+void sendToEmail(BreachType breachType);
