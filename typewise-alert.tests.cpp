@@ -1,65 +1,30 @@
-#include <gtest/gtest.h>
+#include "gtest/gtest.h"
 #include "typewise-alert.h"
 
-TEST(TypeWiseAlertTestSuite, InfersBreachAccordingToLimits) {
-    EXPECT_EQ(inferBreach(20.0, 0.0, 35.0), NORMAL);
-    EXPECT_EQ(inferBreach(-5.0, 0.0, 35.0), TOO_LOW);
-    EXPECT_EQ(inferBreach(40.0, 0.0, 35.0), TOO_HIGH);
-}
 
-TEST(TypeWiseAlertTestSuite, ClassifiesTemperatureBreach) {
-    EXPECT_EQ(classifyTemperatureBreach(PASSIVE_COOLING, 20.0), NORMAL);
-    EXPECT_EQ(classifyTemperatureBreach(PASSIVE_COOLING, -5.0), TOO_LOW);
-    EXPECT_EQ(classifyTemperatureBreach(PASSIVE_COOLING, 40.0), TOO_HIGH);
-}
-
-TEST(TypeWiseAlertTestSuite, AlertsControllerWhenBreachDetected) {
-    BatteryCharacter batteryChar = {PASSIVE_COOLING, "BrandX"};
-    
-    // Test TOO_HIGH breach alert to controller
-    messageStore.clearMessages();
-    checkAndAlert(TO_CONTROLLER, batteryChar, 40.0);
-    auto log = messageStore.getMessages();
-    EXPECT_EQ(log.size(), 1);
-    EXPECT_EQ(log[0], "feed : 2");
-
-    // Test TOO_LOW breach alert to controller
-    messageStore.clearMessages();
-    checkAndAlert(TO_CONTROLLER, batteryChar, -10.0);
-    log = messageStore.getMessages();
-    EXPECT_EQ(log.size(), 1);
-    EXPECT_EQ(log[0], "feed : 1");
-
-    // Test NORMAL condition alert to controller (expect NORMAL message)
-    messageStore.clearMessages();
-    checkAndAlert(TO_CONTROLLER, batteryChar, 20.0);
-    log = messageStore.getMessages();
-    EXPECT_EQ(log.size(), 1);
-    EXPECT_EQ(log[0], "feed : 0");
-}
-
-TEST(TypeWiseAlertTestSuite, SendsEmailWhenBreachDetected) {
-    BatteryCharacter batteryChar = {PASSIVE_COOLING, "BrandY"};
-
-    // Test TOO_HIGH breach alert to email
-    messageStore.clearMessages();
-    checkAndAlert(TO_EMAIL, batteryChar, 40.0);
-    auto log = messageStore.getMessages();
-    EXPECT_EQ(log.size(), 2);
-    EXPECT_EQ(log[0], "To: a.b@c.com");
-    EXPECT_EQ(log[1], "Hi, the temperature is too high");
-
-    // Test TOO_LOW breach alert to email
-    messageStore.clearMessages();
-    checkAndAlert(TO_EMAIL, batteryChar, -10.0);
-    log = messageStore.getMessages();
-    EXPECT_EQ(log.size(), 2);
-    EXPECT_EQ(log[0], "To: a.b@c.com");
-    EXPECT_EQ(log[1], "Hi, the temperature is too low");
-
-    // Test NORMAL condition alert to email (no output expected)
-    messageStore.clearMessages();
-    checkAndAlert(TO_EMAIL, batteryChar, 20.0);
-    log = messageStore.getMessages();
-    EXPECT_EQ(log.size(), 0);
+TEST(TypeWiseAlertTestSuite,InfersBreachAccordingToLimits) {
+  BatteryCharacter battery1;
+  battery1.coolingType = HI_ACTIVE_COOLING;
+  std::string s = "";//checkAndAlert(TO_EMAIL, battery1, 85);
+  
+  int lowerLimit[noOfCoolingTypes];
+  int upperLimit[noOfCoolingTypes];
+  setLowerAndUpperLimits(lowerLimit,upperLimit);
+  
+  std::string expected[2] = {"feed : 1\nfeed : 0\nfeed : 0\nfeed : 0\nfeed : 2\n", 
+                              "To: a.b@c.com\nHi, the temperature is too low\nTo: a.b@c.com\nHi, the temperature is too high\n"};
+  
+  for(int i = TO_CONTROLLER; i < noOfAlertTargets; ++i) {
+    for(int j = PASSIVE_COOLING; j < noOfCoolingTypes; ++j) {
+      AlertTarget alertTarget = static_cast<AlertTarget>(i);
+      CoolingType coolingType = static_cast<CoolingType>(j);
+      battery1.coolingType = coolingType;
+      s = checkAndAlert(alertTarget, battery1, (lowerLimit[battery1.coolingType] - 1));
+      s += checkAndAlert(alertTarget, battery1, lowerLimit[battery1.coolingType]);
+      s += checkAndAlert(alertTarget, battery1, ((upperLimit[battery1.coolingType] + lowerLimit[battery1.coolingType])/2));
+      s += checkAndAlert(alertTarget, battery1, upperLimit[battery1.coolingType]);
+      s += checkAndAlert(alertTarget, battery1, (upperLimit[battery1.coolingType] + 1));
+    }
+    EXPECT_EQ((s == expected[i]), 1);
+  }
 }
