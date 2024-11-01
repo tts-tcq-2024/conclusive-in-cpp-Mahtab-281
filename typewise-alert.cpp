@@ -1,49 +1,68 @@
 #include "typewise-alert.h"
-#include <sstream>
-#include <vector>
-#include <string>
- 
-// Global instance of MessageStore
-MessageStore messageStore;
- 
-BreachType inferBreach(double value, double lowerLimit, double upperLimit) {
-  return (value < lowerLimit) ? TOO_LOW :
-         (value > upperLimit) ? TOO_HIGH :
-         NORMAL;
-}
- 
-BreachType classifyTemperatureBreach(CoolingType coolingType, double temperatureInC) {
-    int lowerLimit = coolingLimits[coolingType].lowerLimit;
-    int upperLimit = coolingLimits[coolingType].upperLimit;
- 
-    return inferBreach(temperatureInC, lowerLimit, upperLimit);
-}
- 
-void checkAndAlert(AlertTarget alertTarget, BatteryCharacter batteryChar, double temperatureInC) {
-  BreachType breachType = classifyTemperatureBreach(batteryChar.coolingType, temperatureInC);
- 
-  if(alertTarget == TO_CONTROLLER) {
-    sendToController(breachType);
-  } else {
-    sendToEmail(breachType);
+#include <stdio.h>
+
+TypewiseAlert::BreachType TypewiseAlert::inferBreach(double value, double lowerLimit, double upperLimit) {
+  if(value < lowerLimit) {
+    return BreachType::TOO_LOW;
+  }
+  else if(value > upperLimit) {
+    return BreachType::TOO_HIGH;
+  }
+  else
+  {
+    return BreachType::NORMAL;
   }
 }
- 
-void sendToController(BreachType breachType) {
-  const unsigned short header = 0xfeed;
-  std::ostringstream message;
-  message << std::hex << header << " : " << breachType;
-  messageStore.addMessage(message.str());
+
+TypewiseAlert::BreachType TypewiseAlert::classifyTemperatureBreach(CoolingType coolingType, double temperatureInC) {
+  int lowerLimit = 0;
+  int upperLimit = 0;
+  if (coolingType == CoolingType::PASSIVE_COOLING) 
+  {
+    upperLimit = 35;
+  }
+  else if (coolingType == CoolingType::HI_ACTIVE_COOLING) 
+  {
+    upperLimit = 45;
+  }
+  else
+  {
+    upperLimit = 40;
+  }
+  return inferBreach(temperatureInC, lowerLimit, upperLimit);
 }
- 
-void sendToEmail(BreachType breachType) {
-  if (breachType == NORMAL) return;
- 
-  const char* recipient = "a.b@c.com";
-  std::string message = (breachType == TOO_LOW) 
-                        ? "Hi, the temperature is too low" 
-                        : "Hi, the temperature is too high";
- 
-  messageStore.addMessage("To: " + std::string(recipient));
-  messageStore.addMessage(message);
+
+void TypewiseAlert::sendToController(BreachType breachType) {
+  const unsigned short header = 0xfeed;
+  printf("%x : %x\n", header, breachType);
+}
+
+void TypewiseAlert::sendToEmail(BreachType breachType) {
+  const char* recepient = "a.b@c.com";
+  if (breachType == BreachType::TOO_LOW)
+  {
+    printf("To: %s\n", recepient);
+    printf("Hi, the temperature is too low\n");
+  }
+  else if (breachType == BreachType::TOO_HIGH)
+  {
+    printf("To: %s\n", recepient);
+    printf("Hi, the temperature is too high\n");
+  }
+  else
+  {
+  }
+}
+
+void TypewiseAlert::checkAndAlert(AlertTarget alertTarget, BatteryCharacter batteryChar, double temperatureInC) 
+{
+  BreachType breachType = classifyTemperatureBreach(batteryChar.coolingType, temperatureInC);
+  if (alertTarget == AlertTarget::TO_CONTROLLER) 
+  {
+    sendToController(breachType);
+  } 
+  else 
+  {
+    sendToEmail(breachType);
+  }
 }
