@@ -20,3 +20,4 @@ TEST(TypeWiseAlertTestSuite,classifyTemperatureBreachAccordingToType) {
   EXPECT_EQ(TypewiseAlert::classifyTemperatureBreach(TypewiseAlert::CoolingType::MED_ACTIVE_COOLING, -5), TypewiseAlert::BreachType::TOO_LOW);
   EXPECT_EQ(TypewiseAlert::classifyTemperatureBreach(TypewiseAlert::CoolingType::MED_ACTIVE_COOLING, 42), TypewiseAlert::BreachType::TOO_HIGH);
 }
+
